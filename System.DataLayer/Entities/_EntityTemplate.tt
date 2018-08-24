@@ -1,0 +1,88 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core.dll" #>
+<#@ assembly name="System.Data.dll" #>
+<#@ assembly name="System.xml.dll" #>
+<#@ import namespace="System.Data" #>
+<#@ import namespace="System.Data.SqlClient" #>
+<#@ output extension=".cs" encoding="utf-8"#>
+using System.Framework.DataLayer;
+using System.DataLayer.Base;
+
+namespace System.DataLayer.Entities
+{
+<#	string connectionString = @"Data source=.;Initial Catalog=YaTzu;Persist Security Info=True;User ID=sa;Password=08180520"; 
+    string tableName = @"Roster";
+    string tableDescription = @"";
+#>
+    /// <summary>
+    /// <#= tableDescription #>
+    /// </summary>
+    public class <#= tableName #>: BaseEntity
+    {
+<#	SqlConnection conn = new SqlConnection(connectionString); 
+    conn.Open(); 
+
+    string SQL = string.Format("select * from [{0}]", tableName); 
+    SqlCommand cmd = new SqlCommand(SQL, conn);
+    SqlDataReader reader = cmd.ExecuteReader(CommandBehavior.KeyInfo);
+    DataTable schemaTB = reader.GetSchemaTable();
+    string fieldName = string.Empty;
+    foreach (DataRow rowMeta in schemaTB.Rows)
+        fieldName += fieldName == string.Empty ? rowMeta["ColumnName"].ToString() : ", " + rowMeta["ColumnName"].ToString();
+#>
+        #region Name Config
+        public enum ncFields { <#= fieldName #> };
+        public enum ncConditions { CompanySerno, Serno };
+        #endregion
+
+        #region Fields
+<#
+    string keyField= string.Empty;
+    foreach (DataRow rowMeta in schemaTB.Rows)
+    {
+        if(rowMeta["IsKey"].ToString() == bool.TrueString) keyField = rowMeta["ColumnName"].ToString();
+        switch(rowMeta["DataType"].ToString())
+        {
+            case "System.Int32":
+#>
+        /// <summary></summary>
+        public int <#= rowMeta["ColumnName"].ToString() #>;
+<#			break;
+            case "System.Double":
+#>
+        /// <summary></summary>
+        public double <#= rowMeta["ColumnName"].ToString() #>;
+<#			break;
+            case "System.Boolean":
+#>
+        /// <summary></summary>
+        public bool <#= rowMeta["ColumnName"].ToString() #>;
+<#			break;
+            case "System.DateTime":
+#>
+        /// <summary></summary>
+        public datetime <#= rowMeta["ColumnName"].ToString() #>;
+<#			break;
+            default:
+#>
+        /// <summary></summary>
+        public string <#= rowMeta["ColumnName"].ToString() #>;
+<#			break;
+        }
+    }
+#>
+        #endregion
+
+        /// <summary>
+        /// 建構式
+        /// </summary>
+        /// <param name="AConn">資料庫連接物件介面</param>
+        public <#= tableName #>(IConnection AConn) : base(AConn)
+        {
+            this.TableName = "<#= tableName.ToUpper() #>";
+            base.addKey("<#= keyField #>");
+            this.ConditionDictionary.Add("CompanySerno", " COM_SERNO = N'?' ");
+            this.ConditionDictionary.Add("Serno", " <#= keyField #> = N'?' ");
+        }
+    }
+}
